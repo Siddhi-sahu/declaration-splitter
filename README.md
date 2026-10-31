@@ -20,4 +20,4 @@ This is practice for Servo issue [#49261](https://github.com/servo/servo/issues/
 - [x] print tokens
 - [x] implement the parser traits and get declaration names
 - [x] extract the value text
-- [ ] split `!important` into `priority`
+- [x] split `!important` into `priority`

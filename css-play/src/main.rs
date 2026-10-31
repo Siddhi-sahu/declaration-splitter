@@ -35,9 +35,18 @@ impl<'i> DeclarationParser<'i> for MyParser {
         _declaration_start: &ParserState,
     ) -> Result<Decl, ParseError<()>> {
         let start = input.position(); // 1. bookmark , the value starts here
-        while input.next().is_ok() {} // 2. walk to the end of the value
+        input.parse_until_before( cssparser::Delimiter::Bang, |i| {
+            while i.next().is_ok() {}
+            Ok::<(), ParseError<()>>(())
+        })?;
         let value = input.slice_from(start).trim().to_string(); // 3. the text from the bookmark to here
-        Ok(Decl {name: name.to_string(), value: value, priority: String::new()})
+
+        let priority = if input.try_parse(cssparser::parse_important).is_ok() {
+            "important".to_string()
+        } else {
+            String::new()
+        };
+        Ok(Decl {name: name.to_string(), value: value, priority: priority})
     }
 }
 
@@ -54,10 +63,22 @@ impl<'i> RuleBodyItemParser<'i, Decl, ()>
 
 
 fn main() {
-    let text = "padding: 20px; color: red !important";
-    let mut parser = Parser::new(text);
-    for item in RuleBodyParser::new(&mut parser, &mut MyParser) {
-        println!("{:?}", item);
+    let tests = [
+        "padding: 20px; color: red !important",
+        "border: 2px solid var(--x)",
+        "color red; padding: 1px",
+        "/* note */ color: red",
+        "color: red; ; ;",
+        "a: b ! important",
+        "x: f(!important) !important",
+        "w: calc(1px + 2px)",
+    ];
+    for text in tests {
+        println!("--- {text}");
+        let mut parser = Parser::new(text);
+        for item in RuleBodyParser::new(&mut parser, &mut MyParser) {
+            println!("{:?}", item);
+        }
     }
 }
 
